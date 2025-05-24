@@ -25,10 +25,13 @@ import tqdm
 
 from google.api_core import retry
 from google.api_core.client_options import ClientOptions
-from google.api_core.exceptions import Aborted, FailedPrecondition, InvalidArgument, NotFound, PermissionDenied
+from google.api_core.exceptions import Aborted, FailedPrecondition, \
+    InvalidArgument, NotFound, PermissionDenied
 from google.api_core.future.polling import POLLING_PREDICATE
-from google.cloud.dataproc_spark_connect.client import DataprocChannelBuilder
-from google.cloud.dataproc_spark_connect.exceptions import DataprocSparkConnectException
+from google.cloud.dataproc_spark_connect.client import DataprocChannelBuilder, \
+    DataprocSparkConnectClient
+from google.cloud.dataproc_spark_connect.exceptions import \
+    DataprocSparkConnectException
 from google.cloud.dataproc_spark_connect.pypi_artifacts import PyPiArtifacts
 from google.cloud.dataproc_v1 import (
     AuthenticationConfig,
@@ -339,13 +342,17 @@ class DataprocSparkSession(SparkSession):
 
                 return None
 
-        def getOrCreate(self) -> "DataprocSparkSession":
+        def getOrCreate(self, force_recreate=False) -> "DataprocSparkSession":
             with DataprocSparkSession._lock:
                 session = self._get_exiting_active_session()
+                if session and not force_recreate:
+                    self.__apply_options(session)
                 if session is None:
                     session = self.__create()
-                if session:
-                    self.__apply_options(session)
+                if session and force_recreate:
+                    print(f"Existing session found: {session}."
+                          " Creating a new session anyways.")
+                    session = self.__create()
                 return session
 
         def _get_dataproc_config(self):
@@ -365,7 +372,8 @@ class DataprocSparkSession(SparkSession):
                 not dataproc_config.environment_config.execution_config.authentication_config.user_workload_authentication_type
                 and "DATAPROC_SPARK_CONNECT_AUTH_TYPE" in os.environ
             ):
-                dataproc_config.environment_config.execution_config.authentication_config.user_workload_authentication_type = AuthenticationConfig.AuthenticationType[
+                dataproc_config.environment_config.execution_config.authentication_config.user_workload_authentication_type = \
+                AuthenticationConfig.AuthenticationType[
                     os.getenv("DATAPROC_SPARK_CONNECT_AUTH_TYPE")
                 ]
             if (
@@ -444,6 +452,13 @@ class DataprocSparkSession(SparkSession):
                 )
             )
             return f"sc-{timestamp}-{random_suffix}"
+
+    def __init__(self, connection, user_id=None):
+        super().__init__(connection)
+        print("(pahulpreets) code compiled at 15:31 IST")
+        self._client = DataprocSparkConnectClient(connection=connection,
+                                                  user_id=user_id)
+        self._session_id = self._client.session_id
 
     def _repr_html_(self) -> str:
         if not self._active_s8s_session_id:
