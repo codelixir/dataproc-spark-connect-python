@@ -462,6 +462,7 @@ class DataprocSparkSession(SparkSession):
             If not set, will default to the $USER environment. Defining the user
             ID as part of the connection string takes precedence.
         """
+        print("(codelixir) code compiled 15:37 IST")
         self._client = DataprocSparkConnectClient(connection, user_id)
         self._session_id = self._client.session_id
         # (testing:) set as false to prevent client.release_session on close()

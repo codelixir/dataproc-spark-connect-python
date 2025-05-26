@@ -19,6 +19,7 @@ import uuid
 import google
 import grpc
 from pyspark.sql.connect.client import ChannelBuilder, SparkConnectClient
+from IPython.display import display, HTML
 
 from . import proxy
 
@@ -195,7 +196,28 @@ class DataprocSparkConnectClient(SparkConnectClient):
             )
             req.operation_id = dataproc_operation_id
         self._operation_id = req.operation_id
+        self._show_operation_id_link()
         return req
+
+    def _show_operation_id_link(self):
+        if not self._operation_id:
+            # we don't want to output anything in this case
+            return
+
+        # use dummy url for now, until the feature is live
+        url = f"https://codelixir.github.io/pages/query?operation_id={self._operation_id}"
+
+        # actual url will be of the form:
+        # "https://console.cloud.google.com/dataproc/interactive/{region}/
+        #    {active_s8s_session_id}/sparkApplications/application/sql;
+        #    associatedSqlOperationId={operation_id}?project={project_id}"
+
+        html_element = f"""
+        <div>
+            <p><a href="{url}">Spark Operation</a></p>
+        </div>
+        """
+        display(HTML(html_element))
 
     @property
     def session_id(self):
